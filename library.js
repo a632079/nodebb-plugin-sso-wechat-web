@@ -16,9 +16,9 @@ var Wechat = {};
 
 Wechat.getStrategy = function(strategies, callback) {
   passport.use(new passportWechat({
-    clientID: "wx7c5fd23380cfe8d0",
-    clientSecret: "035cb32cd44e88c2a317b8e4283c8fd8",
-    requireState: false,
+    appID: "wx7c5fd23380cfe8d0",
+    appSecret: "035cb32cd44e88c2a317b8e4283c8fd8",
+    client:"wechat",
     scope:"snsapi_userinfo",
     callbackURL: nconf.get('url') + '/auth/wechat/callback'
   }, function(accessToken, refreshToken, profile, done) {
@@ -31,7 +31,7 @@ Wechat.getStrategy = function(strategies, callback) {
   }));
 
   strategies.push({
-    name: 'weixin',
+    name: 'wechat',
     url: '/auth/wechat',
     callbackURL: '/auth/wechat/callback',
     icon: 'fa-weixin',
