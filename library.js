@@ -4,21 +4,22 @@ var user = module.parent.require('./user'),
   meta = module.parent.require('./meta'),
   db = module.parent.require('../src/database'),
   passport = module.parent.require('passport'),
-  passportWechat = require('passport-weixin').Strategy,
+  passportWechat = require('passport-wechat').Strategy,
   fs = module.parent.require('fs'),
   path = module.parent.require('path'),
   nconf = module.parent.require('nconf'),
   async = module.parent.require('async');
 
-var constants = module.parent.require('../plugin_configs/sso_wechat_constants');
+//var constants = module.parent.require('../plugin_configs/sso_wechat_constants');
 
 var Wechat = {};
 
 Wechat.getStrategy = function(strategies, callback) {
   passport.use(new passportWechat({
-    clientID: constants.key,
-    clientSecret: constants.secret,
+    clientID: "wx7c5fd23380cfe8d0",
+    clientSecret: "035cb32cd44e88c2a317b8e4283c8fd8",
     requireState: false,
+    scope:"snsapi_userinfo",
     callbackURL: nconf.get('url') + '/auth/wechat/callback'
   }, function(accessToken, refreshToken, profile, done) {
     Wechat.login(profile.id, profile.displayName, function(err, user) {

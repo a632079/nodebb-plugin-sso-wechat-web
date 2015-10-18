@@ -26,7 +26,7 @@
   "readme": "",
   "readmeFilename": "README.md",
   "dependencies": {
-    "passport-weixin": "0.0.2"
+    "passport-wechat": "^2.0.0"
   },
   "nbbpm": {
     "compatibility": "^0.6.0"
