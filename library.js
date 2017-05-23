@@ -52,7 +52,7 @@ Wechat.getStrategy = function(strategies, callback) {
 };
 
 Wechat.getAssociation = function(data, callback) {
-  User.getUserField(data.uid, 'wxid', function(err, wxid) {
+  user.getUserField(data.uid, 'wxid', function(err, wxid) {
     if (err) {
       return callback(err, data);
     }
