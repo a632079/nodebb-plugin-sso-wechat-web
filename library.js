@@ -11,34 +11,79 @@ var user = module.parent.require('./user'),
   async = module.parent.require('async');
 
 //var constants = module.parent.require('../plugin_configs/sso_wechat_constants');
+var constants = Object.freeze({
+  'name': "Wechat2",
+  'admin': {
+    'icon': 'fa-weixin',
+    'route': '/plugins/sso-wechat2'
+  }
+});
 
 var Wechat = {};
 
 Wechat.getStrategy = function(strategies, callback) {
-  passport.use(new passportWechat({
-    appID: "wx7c5fd23380cfe8d0",
-    appSecret: "035cb32cd44e88c2a317b8e4283c8fd8",
-    client:"wechat",
-    scope:"snsapi_userinfo",
-    callbackURL: nconf.get('url') + '/auth/wechat/callback'
-  }, function(accessToken, refreshToken, profile, done) {
-    Wechat.login(profile.id, profile.displayName, function(err, user) {
-      if (err) {
-        return done(err);
-      }
-      done(null, user);
-    });
-  }));
+  meta.settings.get('sso-wechat2', function(err, settings) {
+    if (!err && settings.id && settings.secret) {
+      passport.use(new passportWechat({
+        appID: settings.id,
+        appSecret: settings.secret,
+        client: settings.weclient ? 'wechat' : 'website',
+        scope: "snsapi_userinfo",
+        callbackURL: nconf.get('url') + '/auth/wechat/callback'
+      }, function(accessToken, refreshToken, profile, done) {
+        Wechat.login(profile.id, profile.displayName, function(err, user) {
+          if (err) {
+            return done(err);
+          }
+          done(null, user);
+        });
+      }));
 
-  strategies.push({
-    name: 'wechat',
-    url: '/auth/wechat',
-    callbackURL: '/auth/wechat/callback',
-    icon: 'fa-weixin',
-    scope: ''
+      strategies.push({
+        name: 'wechat',
+        url: '/auth/wechat',
+        callbackURL: '/auth/wechat/callback',
+        icon: 'fa-weixin',
+        scope: ''
+      });
+    }
+    callback(null, strategies);
+  });
+};
+
+Wechat.getAssociation = function(data, callback) {
+  User.getUserField(data.uid, 'wxid', function(err, wxid) {
+    if (err) {
+      return callback(err, data);
+    }
+
+    if (wxid) {
+      data.associations.push({
+        associated: true,
+        name: constants.name,
+        icon: constants.admin.icon
+      });
+    } else {
+      data.associations.push({
+        associated: false,
+        url: nconf.get('url') + '/auth/wechat',
+        name: constants.name,
+        icon: constants.admin.icon
+      });
+    }
+
+    callback(null, data);
+  })
+};
+
+Wechat.addMenuItem = function(custom_header, callback) {
+  custom_header.authentication.push({
+    "route": constants.admin.route,
+    "icon": constants.admin.icon,
+    "name": constants.name
   });
 
-  callback(null, strategies);
+  callback(null, custom_header);
 };
 
 Wechat.login = function(wxid, handle, callback) {
@@ -95,6 +140,19 @@ Wechat.deleteUserData = function(uid, callback) {
     }
     callback(null, uid);
   });
+};
+
+Wechat.init = function(data, callback) {
+  function renderAdmin(req, res) {
+    res.render('admin/plugins/sso-wechat2', {
+      callbackURL: nconf.get('url') + '/auth/wechat/callback'
+    });
+  }
+
+  data.router.get('/admin/plugins/sso-wechat2', data.middleware.admin.buildHeader, renderAdmin);
+  data.router.get('/api/admin/plugins/sso-wechat2', renderAdmin);
+
+  callback();
 };
 
 module.exports = Wechat;
