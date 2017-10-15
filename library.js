@@ -17,7 +17,7 @@ var constants = Object.freeze({
     'route': '/plugins/sso-wechat'
   }
 });
-
+var authenticationController = module.parent.require('./controllers/authentication');
 var Wechat = {};
 
 Wechat.getStrategy = function (strategies, callback) {
@@ -33,6 +33,7 @@ Wechat.getStrategy = function (strategies, callback) {
           scope: 'snsapi_login',
           passReqToCallback: true
         }, function (req, accessToken, refreshToken, profile, expires_in, done) {
+          winston.verbose(profile);
           if (req.hasOwnProperty('user') && req.user.hasOwnProperty('uid') && req.user.uid > 0) {
             //如果用户想重复绑定的话，我们就拒绝他。
             Wechat.hasWeChatId(profile.id, function (err, res) {
@@ -52,21 +53,19 @@ Wechat.getStrategy = function (strategies, callback) {
                 console.log(`[SSO-WeChat] ${req.user.uid} is binded.`);
 
                 //Set Picture
-                db.setUserField(req.user.uid,"wxpic",profile.profileUrl)
+                user.setUserField(req.user.uid, "wxpic", profile.profileUrl)
                 return done(null, req.user);
               }
             });
+          } else {
+            var email = (profile.displayName ? profile.displayName : profile.id) + "@wx.qq.com";
+            Wechat.login(profile.id, profile.displayName, email, profile.profileUrl, accessToken, refreshToken, function (err, user) {
+              if (err) {
+                return done(err);
+              }
+              return done(null, user);
+            });
           }
-
-          var email = (profile.displayName ? profile.displayName : profile.id) + "@wx.qq.com";
-          Wechat.login(profile.id, profile.displayName, email, profile.profileUrl, accessToken, refreshToken, function (err, user) {
-            if (err) {
-              return done(err);
-            }
-            return done(null, user);
-          });
-
-
         }));
 
         strategies.push({
@@ -133,7 +132,7 @@ Wechat.login = function (wxid, handle, email, avatar, accessToken, refreshToken,
         uid: uid
       });
     } else {
-      var success = function(uid) {
+      var success = function (uid) {
         // Save wxchat-specific information to the user
         user.setUserField(uid, 'wxid', wxid);
         db.setObjectField('wxid:uid', wxid, uid);
@@ -143,7 +142,7 @@ Wechat.login = function (wxid, handle, email, avatar, accessToken, refreshToken,
         if (autoConfirm) {
           db.sortedSetRemove('users:notvalidated', uid);
         }
-        
+
         // Save their photo, if present
         if (avatar) {
           user.setUserField(uid, 'wxpic', avatar);
@@ -154,10 +153,10 @@ Wechat.login = function (wxid, handle, email, avatar, accessToken, refreshToken,
         callback(null, {
           uid: uid
         });
-};
+      };
       // New User
-      user.create({username: handle, email: email}, function(err, uid) {
-        if(err) {
+      user.create({ username: handle, email: email }, function (err, uid) {
+        if (err) {
           return callback(err);
         }
         success(uid);
@@ -243,11 +242,11 @@ Wechat.get = function (data, callback) {
 };
 
 Wechat.getWeChatPicture = function (uid, callback) {
-  user.getUserField(uid,'wxpic', function(err,pic){
-    if(err){
+  user.getUserField(uid, 'wxpic', function (err, pic) {
+    if (err) {
       return callback(err);
     }
-    callback(null,pic);
+    callback(null, pic);
   });
 }
 

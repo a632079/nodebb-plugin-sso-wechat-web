@@ -38,8 +38,14 @@
 			"method": "prepareInterstitial"
 		}
 	],
-	"templates": "./templates",
+	"staticDirs": {
+		"static": "./static"
+	},
+	"templates": "static/templates",
+	"less": [
+		"static/less/style.less"
+	],
 	"acpScripts": [
-		"public/admin.js"
+		"static/lib/admin.js"
 	]
 }
