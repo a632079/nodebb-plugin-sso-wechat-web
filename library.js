@@ -4,11 +4,12 @@ var user = module.parent.require('./user'),
   meta = module.parent.require('./meta'),
   db = module.parent.require('../src/database'),
   passport = module.parent.require('passport'),
-  passportWechat = require('passport-weixin').Strategy,
+  passportWechat = require('passport-wechat').Strategy,
   fs = module.parent.require('fs'),
   path = module.parent.require('path'),
   nconf = module.parent.require('nconf'),
-  async = module.parent.require('async');
+  async = module.parent.require('async'),
+  winston = module.parent.require('winston');
 var constants = Object.freeze({
   'name': "微信",
   'admin': {
@@ -23,51 +24,55 @@ Wechat.getStrategy = function (strategies, callback) {
   meta.settings.get('sso-wechat', function (err, settings) {
     if (!err && settings.id && settings.secret) {
       passport.use("wechat", new passportWechat({
-        clientID: settings.id,
-        clientSecret: settings.secret,
+        appID: settings.id,
+        appSecret: settings.secret,
+        client: "web",
         callbackURL: nconf.get('url') + '/auth/wechat/callback',
-        requireState: false,
+        state: "",
         scope: 'snsapi_login',
         passReqToCallback: true
       }, function (req, accessToken, refreshToken, profile, done) {
         if (req.hasOwnProperty('user') && req.user.hasOwnProperty('uid') && req.user.uid > 0) {
           //如果用户想重复绑定的话，我们就拒绝他。
-          QQ.hasWeChatId(profile.id, function (err, res) {
+          Wechat.hasWeChatId(profile.id, function (err, res) {
             if (err) {
               winston.error(err);
-              if (res) {
-                return done("You have binded a WeChat account.If you want to bind another one ,please unbind your account.", flase);
-              } else {
-
-                // Save wechat-specific information to the user
-                console.log("[SSO-WeChat]User is logged.Binding.");
-                console.log("[SSO-WeChat]req.user:");
-                console.log(req.user);
-                User.setUserField(req.user.uid, 'wxid', profile.id);
-                db.setObjectField('wxid:uid', profile.id, req.user.uid);
-                console.log(`[SSO-WeChat] ${req.user.uid} is binded.`);
-
-                //Set Picture
-                db.setObjectField('uid:wxpic',req.user.uid,profile.profileUrl);
-                return done(null, req.user);
-              }
+              return done(err);
             }
-          });
-        }
-        QQ.hasWeChatId(profile.id, function (err, res) {
-          if (err) {
-            winston.error(err);
             if (res) {
               return done("You have binded a WeChat account.If you want to bind another one ,please unbind your account.", flase);
             } else {
-              Wechat.login(profile.id, profile.displayName,profile.profileUrl, function (err, user) {
-                if (err) {
-                  return done(err);
-                }
-                return done(null, user);
-              });
+
+              // Save wechat-specific information to the user
+              console.log("[SSO-WeChat]User is logged.Binding.");
+              console.log("[SSO-WeChat]req.user:");
+              console.log(req.user);
+              User.setUserField(req.user.uid, 'wxid', profile.id);
+              db.setObjectField('wxid:uid', profile.id, req.user.uid);
+              console.log(`[SSO-WeChat] ${req.user.uid} is binded.`);
+
+              //Set Picture
+              db.setObjectField('uid:wxpic', req.user.uid, profile.profileUrl);
+              return done(null, req.user);
             }
+          });
+        }
+        Wechat.hasWeChatId(profile.id, function (err, res) {
+          if (err) {
+            winston.error(err);
+            return done(err);
           }
+          if (res) {
+            return done("You have binded a WeChat account.If you want to bind another one ,please unbind your account.", flase);
+          } else {
+            Wechat.login(profile.id, profile.displayName, profile.profileUrl, function (err, user) {
+              if (err) {
+                return done(err);
+              }
+              return done(null, user);
+            });
+          }
+
         });
 
       }));
@@ -119,7 +124,7 @@ Wechat.addMenuItem = function (custom_header, callback) {
   callback(null, custom_header);
 };
 
-Wechat.login = function (wxid, handle,avatar, callback) {
+Wechat.login = function (wxid, handle, avatar, callback) {
   Wechat.getUidByWechatId(wxid, function (err, uid) {
     if (err) {
       return callback(err);
@@ -142,7 +147,7 @@ Wechat.login = function (wxid, handle,avatar, callback) {
         db.setObjectField('wxid:uid', wxid, uid);
 
         //Set avatar
-        db.setObjectField('uid:wxpic',uid,avatar);
+        db.setObjectField('uid:wxpic', uid, avatar);
         callback(null, {
           uid: uid
         });

@@ -1,6 +1,6 @@
 {
   "name": "nodebb-plugin-sso-wechat-web",
-  "version": "0.1.7",
+  "version": "0.2.0",
   "description": "NodeBB 微信登录插件 (开发平台二维码登录)",
   "main": "library.js",
   "repository": {
@@ -26,7 +26,7 @@
   "readme": "",
   "readmeFilename": "README.md",
   "dependencies": {
-    "passport-weixin": "^0.2.0"
+    "passport-wechat": "^2.0.0"
   },
   "nbbpm": {
     "compatibility": "^0.6.0 || ^1.0.0"
