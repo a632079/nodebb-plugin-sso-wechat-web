@@ -33,7 +33,6 @@ Wechat.getStrategy = function (strategies, callback) {
           scope: 'snsapi_login',
           passReqToCallback: true
         }, function (req, accessToken, refreshToken, profile, expires_in, done) {
-          console.log(profile);
           if (req.hasOwnProperty('user') && req.user.hasOwnProperty('uid') && req.user.uid > 0) {
             //如果用户想重复绑定的话，我们就拒绝他。
             Wechat.hasWeChatId(profile.openid, function (err, res) {
@@ -54,13 +53,15 @@ Wechat.getStrategy = function (strategies, callback) {
                 console.log(`[SSO-WeChat] ${req.user.uid} is binded.(openid is ${profile.openid} and nickname is ${profile.nickname}`);
 
                 //Set Picture
+                var picture = profile.headimgurl.replace("http://", "https://");
                 user.setUserField(req.user.uid, "wxpic", profile.headimgurl)
                 return done(null, req.user);
               }
             });
           } else {
             var email = (profile.nickname ? profile.nickname : profile.openid) + "@wx.qq.com";
-            Wechat.login(profile.openid, profile.nickname, email, profile.headimgurl, accessToken, refreshToken, function (err, user) {
+            var picture = profile.headimgurl.replace("http://", "https://");
+            Wechat.login(profile.openid, profile.nickname, email, picture, accessToken, refreshToken, function (err, user) {
               if (err) {
                 return done(err);
               }
