@@ -25,13 +25,17 @@
 			"hook": "filter:admin.header.build",
 			"method": "addMenuItem"
 		},
-		{	 
-		 "hook": "filter:user.listPictures", 
-		 "method": "list" 
+		{
+			"hook": "filter:user.listPictures",
+			"method": "list"
 		},
 		{
-			"hook": "filter:user.getPicture", 
-			"method": "get" 
+			"hook": "filter:user.getPicture",
+			"method": "get"
+		},
+		{
+			"hook": "filter:register.interstitial",
+			"method": "prepareInterstitial"
 		}
 	],
 	"templates": "./templates",
