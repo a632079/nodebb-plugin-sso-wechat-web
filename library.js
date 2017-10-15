@@ -65,7 +65,15 @@ Wechat.getStrategy = function (strategies, callback) {
               if (err) {
                 return done(err);
               }
-              return done(null, user);
+              // Require collection of email
+              if (email.endsWith('@wx.qq.com')) {
+                req.session.registration = req.session.registration || {};
+                req.session.registration.uid = user.uid;
+                req.session.registration.wxid = profile.openid;
+              }
+              authenticationController.onSuccessfulLogin(req, user.uid, function (err,user) {
+                done(err, !err ? user : null);
+              });
             });
           }
         }));
@@ -269,7 +277,7 @@ Wechat.prepareInterstitial = function (data, callback) {
   // Only execute if:
   //   - uid and fbid are set in session
   //   - email ends with "@wx.qq.com"
-  if (data.userData.hasOwnProperty('uid') && data.userData.hasOwnProperty('fbid')) {
+  if (data.userData.hasOwnProperty('uid') && data.userData.hasOwnProperty('wxid')) {
     user.getUserField(data.userData.uid, 'email', function (err, email) {
       if (email && email.endsWith('@wx.qq.com')) {
         data.interstitials.push({
