@@ -41,7 +41,7 @@ Wechat.getStrategy = function (strategies, callback) {
                 return done(err);
               }
               if (res) {
-                return done("You have binded a WeChat account.If you want to bind another one ,please unbind your account.", flase);
+                return done("You have binded a WeChat account.If you want to bind another one ,please unbind your account.", false);
               } else {
                 // Save wechat-specific information to the user
                 console.log("[SSO-WeChat]User is logged.Binding.");
@@ -193,7 +193,7 @@ Wechat.getUidByWechatId = function (wxid, callback) {
   });
 }
 
-Wechat.deleteUserData = function (uid, callback) {
+Wechat.deleteUserData = function (data, callback) {
   var uid = data.uid;
 
   async.waterfall([
