@@ -13,7 +13,8 @@
     "wechat",
     "sso",
     "oauth",
-    "registration"
+    "registration",
+    "web"
   ],
   "author": {
     "name": "a632079",
