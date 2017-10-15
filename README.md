@@ -3,7 +3,7 @@
 NodeBB 微信二维码登录插件。使用 微信开放平台(open.wechat.com) 的网页接入方式。
 ## 安装
 
-    $ npm install nodebb-plugin-sso-wechat2
+    $ npm install nodebb-plugin-sso-wechat-web
     
 ## 使用
 
