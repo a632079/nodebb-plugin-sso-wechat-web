@@ -1,8 +1,8 @@
 {
-	"id": "nodebb-plugin-sso-wechat2",
-	"name": "NodeBB Wechat SSO",
+	"id": "nodebb-plugin-sso-wechat-web",
+	"name": "NodeBB Wechat SSO Login (QRCODE)",
 	"description": "NodeBB Plugin that allows users to login/register via their Wechat account.",
-	"url": "https://github.com/revir/nodebb-plugin-sso-wechat2",
+	"url": "https://github.com/a632079/nodebb-plugin-sso-wechat-web",
 	"library": "./library.js",
 	"hooks": [
 		{ "hook": "static:app.load", "method": "init" },
