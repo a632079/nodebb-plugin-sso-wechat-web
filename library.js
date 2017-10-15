@@ -32,7 +32,7 @@ Wechat.getStrategy = function (strategies, callback) {
           state: "",
           scope: 'snsapi_login',
           passReqToCallback: true
-        }, function (req, accessToken, refreshToken, profile, done) {
+        }, function (req, accessToken, refreshToken, profile, expires_in, done) {
           if (req.hasOwnProperty('user') && req.user.hasOwnProperty('uid') && req.user.uid > 0) {
             //如果用户想重复绑定的话，我们就拒绝他。
             Wechat.hasWeChatId(profile.id, function (err, res) {
@@ -59,7 +59,7 @@ Wechat.getStrategy = function (strategies, callback) {
           }
 
           var email = (profile.displayName ? profile.displayName : profile.id) + "@wx.qq.com";
-          Wechat.login(profile.id, profile.displayName, email, profile.profileUrl, function (err, user) {
+          Wechat.login(profile.id, profile.displayName, email, profile.profileUrl, accessToken, refreshToken, function (err, user) {
             if (err) {
               return done(err);
             }
@@ -119,13 +119,14 @@ Wechat.addMenuItem = function (custom_header, callback) {
   callback(null, custom_header);
 };
 
-Wechat.login = function (wxid, handle, email, avatar, callback) {
+Wechat.login = function (wxid, handle, email, avatar, accessToken, refreshToken, callback) {
   Wechat.getUidByWechatId(wxid, function (err, uid) {
     if (err) {
       return callback(err);
     }
     if (uid !== null) {
       // Existing User
+      Wechat.storeTokens(uid, accessToken, refreshToken);
       callback(null, {
         uid: uid
       });
@@ -138,6 +139,8 @@ Wechat.login = function (wxid, handle, email, avatar, callback) {
         if (err) {
           return callback(err);
         }
+
+        Wechat.storeTokens(uid, accessToken, refreshToken);
         // Save wechat-specific information to the user
         user.setUserField(uid, 'wxid', wxid);
         db.setObjectField('wxid:uid', wxid, uid);
@@ -245,12 +248,12 @@ Wechat.init = function (data, callback) {
 
   callback();
 };
-Wechat.prepareInterstitial = function(data, callback) {
+Wechat.prepareInterstitial = function (data, callback) {
   // Only execute if:
   //   - uid and fbid are set in session
   //   - email ends with "@wx.qq.com"
   if (data.userData.hasOwnProperty('uid') && data.userData.hasOwnProperty('fbid')) {
-    user.getUserField(data.userData.uid, 'email', function(err, email) {
+    user.getUserField(data.userData.uid, 'email', function (err, email) {
       if (email && email.endsWith('@wx.qq.com')) {
         data.interstitials.push({
           template: 'partials/sso-wechat/email.tpl',
@@ -266,7 +269,7 @@ Wechat.prepareInterstitial = function(data, callback) {
   }
 };
 
-Wechat.storeAdditionalData = function(userData, data, callback) {
+Wechat.storeAdditionalData = function (userData, data, callback) {
   async.waterfall([
     // Reset email confirm throttle
     async.apply(db.delete, 'uid:' + userData.uid + ':confirm:email:sent'),
