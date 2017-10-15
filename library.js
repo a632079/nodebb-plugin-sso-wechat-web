@@ -46,6 +46,9 @@ Wechat.getStrategy = function (strategies, callback) {
                 User.setUserField(req.user.uid, 'wxid', profile.id);
                 db.setObjectField('wxid:uid', profile.id, req.user.uid);
                 console.log(`[SSO-WeChat] ${req.user.uid} is binded.`);
+
+                //Set Picture
+                db.setObjectField('uid:wxpic',req.user.uid,profile.profileUrl);
                 return done(null, req.user);
               }
             }
@@ -57,7 +60,7 @@ Wechat.getStrategy = function (strategies, callback) {
             if (res) {
               return done("You have binded a WeChat account.If you want to bind another one ,please unbind your account.", flase);
             } else {
-              Wechat.login(profile.id, profile.displayName, function (err, user) {
+              Wechat.login(profile.id, profile.displayName,profile.profileUrl, function (err, user) {
                 if (err) {
                   return done(err);
                 }
@@ -116,12 +119,11 @@ Wechat.addMenuItem = function (custom_header, callback) {
   callback(null, custom_header);
 };
 
-Wechat.login = function (wxid, handle, callback) {
+Wechat.login = function (wxid, handle,avatar, callback) {
   Wechat.getUidByWechatId(wxid, function (err, uid) {
     if (err) {
       return callback(err);
     }
-
     if (uid !== null) {
       // Existing User
       callback(null, {
@@ -135,11 +137,12 @@ Wechat.login = function (wxid, handle, callback) {
         if (err) {
           return callback(err);
         }
-
         // Save wechat-specific information to the user
         user.setUserField(uid, 'wxid', wxid);
         db.setObjectField('wxid:uid', wxid, uid);
 
+        //Set avatar
+        db.setObjectField('uid:wxpic',uid,avatar);
         callback(null, {
           uid: uid
         });
@@ -156,7 +159,15 @@ Wechat.hasWeChatId = function (wxid, callback) {
     callback(null, res);
   });
 };
-
+Wechat.getUidByWechatId = function (wxid, callback) {
+  db.getObjectField('wxid:uid', wxid, function (err, uid) {
+    if (err) {
+      callback(err);
+    } else {
+      callback(null, uid);
+    }
+  });
+}
 
 Wechat.deleteUserData = function (uid, callback) {
   async.waterfall([
@@ -203,7 +214,7 @@ Wechat.get = function (data, callback) {
         return callback(null, data);
       }
       if (wechatPicture == null) {
-        winston.error("[sso-we    chat-web]uid:" + data.uid + "存在版本兼容问题。无法调用图像...跳过..");
+        winston.error("[sso-wechat-web]uid:" + data.uid + "存在版本兼容问题。无法调用图像...跳过..");
         return callback(null, data);
       }
       data.picture = wechatPicture;
@@ -215,7 +226,7 @@ Wechat.get = function (data, callback) {
 };
 
 Wechat.getWeChatPicture = function (uid, callback) {
-
+  db.getObjectField('uid:wxpic', uid, callback);
 }
 
 
