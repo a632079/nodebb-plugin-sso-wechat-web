@@ -33,10 +33,10 @@ Wechat.getStrategy = function (strategies, callback) {
           scope: 'snsapi_login',
           passReqToCallback: true
         }, function (req, accessToken, refreshToken, profile, expires_in, done) {
-          winston.verbose(profile);
+          console.log(profile);
           if (req.hasOwnProperty('user') && req.user.hasOwnProperty('uid') && req.user.uid > 0) {
             //如果用户想重复绑定的话，我们就拒绝他。
-            Wechat.hasWeChatId(profile.id, function (err, res) {
+            Wechat.hasWeChatId(profile.openid, function (err, res) {
               if (err) {
                 winston.error(err);
                 return done(err);
@@ -46,20 +46,21 @@ Wechat.getStrategy = function (strategies, callback) {
               } else {
                 // Save wechat-specific information to the user
                 console.log("[SSO-WeChat]User is logged.Binding.");
-                console.log("[SSO-WeChat]req.user:");
-                console.log(req.user);
-                user.setUserField(req.user.uid, 'wxid', profile.id);
-                db.setObjectField('wxid:uid', profile.id, req.user.uid);
-                console.log(`[SSO-WeChat] ${req.user.uid} is binded.`);
+                //console.log("[SSO-WeChat]req.user:");
+                //console.log(req.user);
+                //console.log(profile);
+                user.setUserField(req.user.uid, 'wxid', profile.openid);
+                db.setObjectField('wxid:uid', profile.openid, req.user.uid);
+                console.log(`[SSO-WeChat] ${req.user.uid} is binded.(openid is ${profile.openid} and nickname is ${profile.nickname}`);
 
                 //Set Picture
-                user.setUserField(req.user.uid, "wxpic", profile.profileUrl)
+                user.setUserField(req.user.uid, "wxpic", profile.headimgurl)
                 return done(null, req.user);
               }
             });
           } else {
-            var email = (profile.displayName ? profile.displayName : profile.id) + "@wx.qq.com";
-            Wechat.login(profile.id, profile.displayName, email, profile.profileUrl, accessToken, refreshToken, function (err, user) {
+            var email = (profile.nickname ? profile.nickname : profile.openid) + "@wx.qq.com";
+            Wechat.login(profile.openid, profile.nickname, email, profile.headimgurl, accessToken, refreshToken, function (err, user) {
               if (err) {
                 return done(err);
               }
