@@ -52,7 +52,7 @@ Wechat.getStrategy = function (strategies, callback) {
                 console.log(`[SSO-WeChat] ${req.user.uid} is binded.`);
 
                 //Set Picture
-                db.setObjectField('uid:wxpic', req.user.uid, profile.profileUrl);
+                db.setUserField(req.user.uid,"wxpic",profile.profileUrl)
                 return done(null, req.user);
               }
             });
@@ -74,7 +74,8 @@ Wechat.getStrategy = function (strategies, callback) {
           url: '/auth/wechat',
           callbackURL: '/auth/wechat/callback',
           icon: 'fa-weixin',
-          scope: ''
+          scope: '',
+          color: "#36bc67"
         });
       }
       callback(null, strategies);
@@ -127,29 +128,39 @@ Wechat.login = function (wxid, handle, email, avatar, accessToken, refreshToken,
     if (uid !== null) {
       // Existing User
       Wechat.storeTokens(uid, accessToken, refreshToken);
+      user.setUserField(uid, 'wxpic', avatar); //更新头像
       callback(null, {
         uid: uid
       });
     } else {
-      // New User
-      user.create({
-        username: handle,
-        email: email
-      }, function (err, uid) {
-        if (err) {
-          return callback(err);
+      var success = function(uid) {
+        // Save wxchat-specific information to the user
+        user.setUserField(uid, 'wxid', wxid);
+        db.setObjectField('wxid:uid', wxid, uid);
+        var autoConfirm = 1;
+        user.setUserField(uid, 'email:confirmed', autoConfirm);
+
+        if (autoConfirm) {
+          db.sortedSetRemove('users:notvalidated', uid);
+        }
+        
+        // Save their photo, if present
+        if (avatar) {
+          user.setUserField(uid, 'wxpic', avatar);
         }
 
         Wechat.storeTokens(uid, accessToken, refreshToken);
-        // Save wechat-specific information to the user
-        user.setUserField(uid, 'wxid', wxid);
-        db.setObjectField('wxid:uid', wxid, uid);
 
-        //Set avatar
-        db.setObjectField('uid:wxpic', uid, avatar);
         callback(null, {
           uid: uid
         });
+};
+      // New User
+      user.create({username: handle, email: email}, function(err, uid) {
+        if(err) {
+          return callback(err);
+        }
+        success(uid);
       });
     }
   });
@@ -232,7 +243,12 @@ Wechat.get = function (data, callback) {
 };
 
 Wechat.getWeChatPicture = function (uid, callback) {
-  db.getObjectField('uid:wxpic', uid, callback);
+  user.getUserField(uid,'wxpic', function(err,pic){
+    if(err){
+      return callback(err);
+    }
+    callback(null,pic);
+  });
 }
 
 
