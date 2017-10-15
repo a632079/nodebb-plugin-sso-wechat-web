@@ -75,7 +75,7 @@ Wechat.getStrategy = function (strategies, callback) {
                 if (err) {
                   return done(err);
                 } else {
-                  done(null, user.uid);
+                  done(null, user);
                 }
               });
             });
