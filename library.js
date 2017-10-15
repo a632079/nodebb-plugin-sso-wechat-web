@@ -27,32 +27,46 @@ Wechat.getStrategy = function (strategies, callback) {
         clientSecret: settings.secret,
         callbackURL: nconf.get('url') + '/auth/wechat/callback',
         requireState: false,
-        scope: 'snsapi_login'
-      }, function (accessToken, refreshToken, profile, done) {
-        console.log(profile);
+        scope: 'snsapi_login',
+        passReqToCallback: true
+      }, function (req, accessToken, refreshToken, profile, done) {
         if (req.hasOwnProperty('user') && req.user.hasOwnProperty('uid') && req.user.uid > 0) {
           //如果用户想重复绑定的话，我们就拒绝他。
-          if (QQ.getQQIDbyuid(req.user.uid) == profile.id) {
-            done("You have binded a WeChat account.If you want to bind another one ,please unbind your account.", flase);
-          }
+          QQ.hasWeChatId(profile.id, function (err, res) {
+            if (err) {
+              winston.error(err);
+              if (res) {
+                return done("You have binded a WeChat account.If you want to bind another one ,please unbind your account.", flase);
+              } else {
 
-          // Save wechat-specific information to the user
-          console.log("[SSO-WeChat]User is logged.Binding.");
-          console.log("[SSO-WeChat]req.user:");
-          console.log(req.user);
-          User.setUserField(req.user.uid, 'wxid', profile.id);
-          db.setObjectField('wxid:uid', profile.id, req.user.uid);
-          console.log(`[SSO-WeChat] ${req.user.uid} is binded.`);
-          return done(null, req.user);
-
-
+                // Save wechat-specific information to the user
+                console.log("[SSO-WeChat]User is logged.Binding.");
+                console.log("[SSO-WeChat]req.user:");
+                console.log(req.user);
+                User.setUserField(req.user.uid, 'wxid', profile.id);
+                db.setObjectField('wxid:uid', profile.id, req.user.uid);
+                console.log(`[SSO-WeChat] ${req.user.uid} is binded.`);
+                return done(null, req.user);
+              }
+            }
+          });
         }
-        Wechat.login(profile.id, profile.displayName, function (err, user) {
+        QQ.hasWeChatId(profile.id, function (err, res) {
           if (err) {
-            return done(err);
+            winston.error(err);
+            if (res) {
+              return done("You have binded a WeChat account.If you want to bind another one ,please unbind your account.", flase);
+            } else {
+              Wechat.login(profile.id, profile.displayName, function (err, user) {
+                if (err) {
+                  return done(err);
+                }
+                return done(null, user);
+              });
+            }
           }
-          done(null, user);
         });
+
       }));
 
       strategies.push({
@@ -143,17 +157,6 @@ Wechat.hasWeChatId = function (wxid, callback) {
   });
 };
 
-    //通过UID获取QQid    
-    Wechat.getWechatIdByUid = function(uid){
-        db.getObjectField('', uid, function(err, wxid) {
-			if (err) {
-				console.log(`[SSO-WeChat]get a error:${err},While get WeChatId by uid`);
-				return false;
-			} else {
-				return wxid;
-			}
-		});
-}
 
 Wechat.deleteUserData = function (uid, callback) {
   async.waterfall([
@@ -169,6 +172,52 @@ Wechat.deleteUserData = function (uid, callback) {
     callback(null, uid);
   });
 };
+
+Wechat.list = function (data, callback) {
+  Wechat.getWeChatPicture(data.uid, function (err, wechatPicture) {
+    if (err) {
+      winston.error(err);
+      return callback(null, data);
+    }
+    if (wechatPicture == null) {
+      winston.error("[sso-wechat-web]uid:" + data.uid + "存在版本兼容问题。无法调用图像...跳过..");
+      return callback(null, data);
+    }
+    data.pictures.push({
+      type: 'wechat',
+      url: wechatPicture,
+      text: '微信头像'
+    });
+
+    callback(null, data);
+  });
+
+
+};
+
+Wechat.get = function (data, callback) {
+  if (data.type === 'wechat') {
+    Wechat.getWeChatPicture(data.uid, function (err, wechatPicture) {
+      if (err) {
+        winston.error(err);
+        return callback(null, data);
+      }
+      if (wechatPicture == null) {
+        winston.error("[sso-we    chat-web]uid:" + data.uid + "存在版本兼容问题。无法调用图像...跳过..");
+        return callback(null, data);
+      }
+      data.picture = wechatPicture;
+      callback(null, data);
+    });
+  } else {
+    callback(null, data);
+  }
+};
+
+Wechat.getWeChatPicture = function (uid, callback) {
+
+}
+
 
 Wechat.init = function (data, callback) {
   function renderAdmin(req, res) {

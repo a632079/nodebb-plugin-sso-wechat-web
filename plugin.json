@@ -5,11 +5,34 @@
 	"url": "https://github.com/a632079/nodebb-plugin-sso-wechat-web",
 	"library": "./library.js",
 	"hooks": [
-		{ "hook": "static:app.load", "method": "init" },
-		{ "hook": "filter:auth.init", "method": "getStrategy" },
-		{ "hook": "filter:user.delete", "method": "deleteUserData" },
-		{ "hook": "filter:auth.list", "method": "getAssociation" },
-		{ "hook": "filter:admin.header.build", "method": "addMenuItem" }
+		{
+			"hook": "static:app.load",
+			"method": "init"
+		},
+		{
+			"hook": "filter:auth.init",
+			"method": "getStrategy"
+		},
+		{
+			"hook": "filter:user.delete",
+			"method": "deleteUserData"
+		},
+		{
+			"hook": "filter:auth.list",
+			"method": "getAssociation"
+		},
+		{
+			"hook": "filter:admin.header.build",
+			"method": "addMenuItem"
+		},
+		{	 
+		 "hook": "filter:user.listPictures", 
+		 "method": "list" 
+		},
+		{
+			"hook": "filter:user.getPicture", 
+			"method": "get" 
+		}
 	],
 	"templates": "./templates",
 	"acpScripts": [
