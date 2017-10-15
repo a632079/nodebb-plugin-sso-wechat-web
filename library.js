@@ -71,8 +71,12 @@ Wechat.getStrategy = function (strategies, callback) {
                 req.session.registration.uid = user.uid;
                 req.session.registration.wxid = profile.openid;
               }
-              authenticationController.onSuccessfulLogin(req, user.uid, function (err,user) {
-                done(err, !err ? user : null);
+              authenticationController.onSuccessfulLogin(req, user.uid, function (err) {
+                if (err) {
+                  return done(err);
+                } else {
+                  done(null, user.uid);
+                }
               });
             });
           }
