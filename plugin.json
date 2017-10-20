@@ -14,7 +14,7 @@
 			"method": "getStrategy"
 		},
 		{
-			"hook": "filter:user.delete",
+			"hook": "static:user.delete",
 			"method": "deleteUserData"
 		},
 		{

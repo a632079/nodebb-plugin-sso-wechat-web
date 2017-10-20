@@ -281,6 +281,7 @@ Wechat.init = function (data, callback) {
   data.router.get('/api/admin/plugins/sso-wechat', renderAdmin);
 
   //DEV Router
+  /*
   data.router.get('/sso-wechat/invalidate', function (req, res) {
     if (req.user.hasOwnProperty('uid') && req.user.uid > 0) {
       var uid = req.user.uid;
@@ -311,7 +312,8 @@ Wechat.init = function (data, callback) {
     } else {
       res.json({ code: 500 });
     }
-  })
+  });
+  */
   callback();
 };
 Wechat.prepareInterstitial = function (data, callback) {
