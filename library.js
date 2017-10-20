@@ -34,7 +34,7 @@ Wechat.getStrategy = function (strategies, callback) {
           passReqToCallback: true
         }, function (req, accessToken, refreshToken, profile, expires_in, done) {
           if (req.hasOwnProperty('user') && req.user.hasOwnProperty('uid') && req.user.uid > 0) {
-            //如果用户想重复绑定的话，我们就拒绝他。
+            //if user want to bind more than one NodeBB User , we refuse him/her.
             Wechat.hasWeChatId(profile.openid, function (err, res) {
               if (err) {
                 winston.error(err);
@@ -43,14 +43,10 @@ Wechat.getStrategy = function (strategies, callback) {
               if (res) {
                 return done("You have binded a WeChat account.If you want to bind another one ,please unbind your account.", false);
               } else {
-                // Save wechat-specific information to the user
-                console.log("[SSO-WeChat]User is logged.Binding.");
-                //console.log("[SSO-WeChat]req.user:");
-                //console.log(req.user);
-                //console.log(profile);
+                winston.verbose("[SSO-WeChat-web]User is logged.Binding.");
                 user.setUserField(req.user.uid, 'wxid', profile.openid);
                 db.setObjectField('wxid:uid', profile.openid, req.user.uid);
-                console.log(`[SSO-WeChat] ${req.user.uid} is binded.(openid is ${profile.openid} and nickname is ${profile.nickname}`);
+                winston.verbose(`[SSO-WeChat-web] ${req.user.uid} is binded.(openid is ${profile.openid} and nickname is ${profile.nickname}`);
 
                 //Set Picture
                 var picture = profile.headimgurl.replace("http://", "https://");
@@ -88,7 +84,7 @@ Wechat.getStrategy = function (strategies, callback) {
           callbackURL: '/auth/wechat/callback',
           icon: 'fa-weixin',
           scope: '',
-          color: "#36bc67"
+          color: "#36bc67" //Try change color
         });
       }
       callback(null, strategies);
@@ -141,7 +137,7 @@ Wechat.login = function (wxid, handle, email, avatar, accessToken, refreshToken,
     if (uid !== null) {
       // Existing User
       Wechat.storeTokens(uid, accessToken, refreshToken);
-      user.setUserField(uid, 'wxpic', avatar); //更新头像
+      user.setUserField(uid, 'wxpic', avatar); //update avatar
       callback(null, {
         uid: uid
       });
@@ -160,10 +156,11 @@ Wechat.login = function (wxid, handle, email, avatar, accessToken, refreshToken,
         // Save their photo, if present
         if (avatar) {
           user.setUserField(uid, 'wxpic', avatar);
+          user.setUserField(uid, 'picture', avatar);
         }
 
         Wechat.storeTokens(uid, accessToken, refreshToken);
-
+        winston.verbose('[sso-wechat-web]uid:' + uid + 'is created successfully.(openid is ' + wxid + ', nickname is ' + handle + ')');
         callback(null, {
           uid: uid
         });
@@ -171,7 +168,14 @@ Wechat.login = function (wxid, handle, email, avatar, accessToken, refreshToken,
       // New User
       user.create({ username: handle, email: email }, function (err, uid) {
         if (err) {
-          return callback(err);
+          //If username is invalid , just use wx- + openid as user's username
+          user.create({ username: "wx-" + wxid, email: email }, function (err, uid) {
+            if (err) {
+              return callback(err);
+            } else {
+              success(uid);
+            }
+          });
         }
         success(uid);
       });
@@ -204,6 +208,7 @@ Wechat.deleteUserData = function (data, callback) {
     async.apply(user.getUserField, uid, 'wxid'),
     function (oAuthIdToDelete, next) {
       db.deleteObjectField('wxid:uid', oAuthIdToDelete, next);
+      winston.verbose('[sso-wechat-web] uid:' + uid + 'have invalidated his wechat successfully.');
     }
   ], function (err) {
     if (err) {
@@ -221,7 +226,7 @@ Wechat.list = function (data, callback) {
       return callback(null, data);
     }
     if (wechatPicture == null) {
-      winston.error("[sso-wechat-web]uid:" + data.uid + "存在版本兼容问题。无法调用图像...跳过..");
+      winston.error("[sso-wechat-web]uid:" + data.uid + "is invalid,skipping...");
       return callback(null, data);
     }
     data.pictures.push({
@@ -244,7 +249,7 @@ Wechat.get = function (data, callback) {
         return callback(null, data);
       }
       if (wechatPicture == null) {
-        winston.error("[sso-wechat-web]uid:" + data.uid + "存在版本兼容问题。无法调用图像...跳过..");
+        winston.error("[sso-wechat-web]uid:" + data.uid + "is invalid,skipping...");
         return callback(null, data);
       }
       data.picture = wechatPicture;
@@ -275,6 +280,38 @@ Wechat.init = function (data, callback) {
   data.router.get('/admin/plugins/sso-wechat', data.middleware.admin.buildHeader, renderAdmin);
   data.router.get('/api/admin/plugins/sso-wechat', renderAdmin);
 
+  //DEV Router
+  data.router.get('/sso-wechat/invalidate', function (req, res) {
+    if (req.user.hasOwnProperty('uid') && req.user.uid > 0) {
+      var uid = req.user.uid;
+      user.getUserField(uid, 'wxid', function (err, wxid) {
+        if (err) {
+          res.json(err);
+        } else {
+          db.deleteObjectField('wxid:uid', wxid, function (err) {
+            if (err) {
+              res.json(err);
+            } else {
+              //check
+              db.hasWeChatId(wxid, function (err, res) {
+                if (res) {
+                  res.json({ code: 500, text: "Fuck!" });
+                } else {
+                  res.json({ code: 200, text: "ok" });
+                }
+              });
+            }
+          });
+        }
+      }),
+        function (oAuthIdToDelete, next) {
+          db.deleteObjectField('wxid:uid', oAuthIdToDelete, next);
+          winston.verbose('[sso-wechat-web] uid:' + uid + 'have invalidated his wechat successfully.');
+        }
+    } else {
+      res.json({ code: 500 });
+    }
+  })
   callback();
 };
 Wechat.prepareInterstitial = function (data, callback) {
