@@ -43,10 +43,10 @@ Wechat.getStrategy = function (strategies, callback) {
               if (res) {
                 return done("You have binded a WeChat account.If you want to bind another one ,please unbind your account.", false);
               } else {
-                winston.verbose("[SSO-WeChat-web]User is logged.Binding.");
+                winston.info("[SSO-WeChat-web]User is logged.Binding.");
                 user.setUserField(req.user.uid, 'wxid', profile.openid);
                 db.setObjectField('wxid:uid', profile.openid, req.user.uid);
-                winston.verbose(`[SSO-WeChat-web] ${req.user.uid} is binded.(openid is ${profile.openid} and nickname is ${profile.nickname}`);
+                winston.info(`[SSO-WeChat-web] ${req.user.uid} is binded.(openid is ${profile.openid} and nickname is ${profile.nickname}`);
 
                 //Set Picture
                 var picture = profile.headimgurl.replace("http://", "https://");
@@ -71,7 +71,7 @@ Wechat.getStrategy = function (strategies, callback) {
                 if (err) {
                   return done(err);
                 } else {
-                  winston.verbose('[sso-wechat-web] user:' + user.uid + ' is logged via wechat.(openid is ' + profile.id + ' and nickname is ' + profile.nickname + ')');
+                  winston.info('[sso-wechat-web] user:' + user.uid + ' is logged via wechat.(openid is ' + profile.id + ' and nickname is ' + profile.nickname + ')');
                   done(null, user);
                 }
               });
@@ -161,7 +161,7 @@ Wechat.login = function (wxid, handle, email, avatar, accessToken, refreshToken,
         }
 
         Wechat.storeTokens(uid, accessToken, refreshToken);
-        winston.verbose('[sso-wechat-web]uid:' + uid + 'is created successfully.(openid is ' + wxid + ', nickname is ' + handle + ')');
+        winston.info('[sso-wechat-web]uid:' + uid + 'is created successfully.(openid is ' + wxid + ', nickname is ' + handle + ')');
         callback(null, {
           uid: uid
         });
@@ -209,7 +209,7 @@ Wechat.deleteUserData = function (data, callback) {
     async.apply(user.getUserField, uid, 'wxid'),
     function (oAuthIdToDelete, next) {
       db.deleteObjectField('wxid:uid', oAuthIdToDelete, next);
-      winston.verbose('[sso-wechat-web] uid:' + uid + 'have invalidated his wechat successfully.');
+      winston.info('[sso-wechat-web] uid:' + uid + 'have invalidated his wechat successfully.');
     }
   ], function (err) {
     if (err) {
@@ -353,7 +353,7 @@ Wechat.storeAdditionalData = function (userData, data, callback) {
 };
 Wechat.storeTokens = function (uid, accessToken, refreshToken) {
   //JG: Actually save the useful stuff
-  winston.verbose("Storing received WeChat access information for uid(" + uid + ") accessToken(" + accessToken + ") refreshToken(" + refreshToken + ")");
+  winston.info("Storing received WeChat access information for uid(" + uid + ") accessToken(" + accessToken + ") refreshToken(" + refreshToken + ")");
   user.setUserField(uid, 'wxaccesstoken', accessToken);
   user.setUserField(uid, 'wxrefreshtoken', refreshToken);
 };
