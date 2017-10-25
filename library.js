@@ -71,7 +71,7 @@ Wechat.getStrategy = function (strategies, callback) {
                 if (err) {
                   return done(err);
                 } else {
-                  winston.info('[sso-wechat-web] user:' + user.uid + ' is logged via wechat.(openid is ' + profile.id + ' and nickname is ' + profile.nickname + ')');
+                  winston.info('[sso-wechat-web] user:' + user.uid + ' is logged via wechat.(openid is ' + profile.openid + ' and nickname is ' + profile.nickname + ')');
                   done(null, user);
                 }
               });
