@@ -55,8 +55,8 @@ Wechat.getStrategy = function (strategies, callback) {
               }
             })
           } else {
-            var email = (profile.nickname ? profile.nickname : profile.openid) + '@wx.qq.com'
-            var picture = profile.headimgurl.replace('http://', 'https://')
+            const email = (profile.nickname ? profile.nickname : profile.openid) + '@wx.qq.com'
+            const picture = profile.headimgurl.replace('http://', 'https://')
             Wechat.login(profile.openid, profile.nickname, email, picture, accessToken, refreshToken, function (err, user) {
               if (err) {
                 return done(err)
@@ -104,17 +104,18 @@ Wechat.getAssociation = function (data, callback) {
     if (wxid) {
       data.associations.push({
         associated: true,
+        deauthUrl: nconf.get('url') + '/deauth/wechat',
         name: constants.name,
         icon: constants.admin.icon
       })
     } else {
       data.associations.push({
         associated: false,
-        url: nconf.get('url') + '/auth/wechat',
+        url: nconf.get('url') + '/deauth/wechat',
         name: constants.name,
         icon: constants.admin.icon
       })
-    }
+}
 
     callback(null, data)
   })
@@ -143,11 +144,11 @@ Wechat.login = function (wxid, handle, email, avatar, accessToken, refreshToken,
         uid: uid
       })
     } else {
-      var success = function (uid) {
+      const success = function (uid) {
         // Save wxchat-specific information to the user
         user.setUserField(uid, 'wxid', wxid)
         db.setObjectField('wxid:uid', wxid, uid)
-        var autoConfirm = 1
+        const autoConfirm = 1
         user.setUserField(uid, 'email:confirmed', autoConfirm)
 
         if (autoConfirm) {
@@ -203,13 +204,14 @@ Wechat.getUidByWechatId = function (wxid, callback) {
 }
 
 Wechat.deleteUserData = function (data, callback) {
-  var uid = data.uid
-
+  const uid = data.uid
   async.waterfall([
     async.apply(user.getUserField, uid, 'wxid'),
     function (oAuthIdToDelete, next) {
       db.deleteObjectField('wxid:uid', oAuthIdToDelete, next)
-      winston.info('[sso-wechat-web] uid:' + uid + 'have invalidated his wechat successfully.')
+    },
+    function (next) {
+      db.deleteObjectField('user:' + uid, 'wxid', next)
     }
   ], function (err) {
     if (err) {
@@ -269,6 +271,8 @@ Wechat.getWeChatPicture = function (uid, callback) {
 }
 
 Wechat.init = function (data, callback) {
+  const hostHelpers = require.main.require('./src/routes/helpers')
+
   function renderAdmin (req, res) {
     res.render('admin/plugins/sso-wechat', {
       callbackURL: nconf.get('url') + '/auth/wechat/callback'
@@ -278,11 +282,31 @@ Wechat.init = function (data, callback) {
   data.router.get('/admin/plugins/sso-wechat', data.middleware.admin.buildHeader, renderAdmin)
   data.router.get('/api/admin/plugins/sso-wechat', renderAdmin)
 
+  hostHelpers.setupPageRoute(data.router, '/deauth/qq', data.middleware, [data.middleware.requireUser], function (req, res) {
+    res.render('partials/sso-wechat/deauth', {
+      service: '微信'
+    })
+  })
+  data.router.post('/deauth/qq', data.middleware.requireUser, function (req, res, next) {
+    Wechat.deleteUserData({
+      uid: req.user.uid
+    }, function (err, uid) {
+      if (err) {
+        return next(err)
+      }
+      user.getUserField(uid, 'userslug', function (err, userslug) {
+        if (err) {
+          return next(err)
+        }
+        res.redirect(nconf.get('relative_path') + '/user/' + userslug + '/edit')
+      })
+    })
+  })
   // DEV Router
   /*
   data.router.get('/sso-wechat/invalidate', function (req, res) {
     if (req.user.hasOwnProperty('uid') && req.user.uid > 0) {
-      var uid = req.user.uid;
+      const uid = req.user.uid;
       user.getUserField(uid, 'wxid', function (err, wxid) {
         if (err) {
           res.json(err);
