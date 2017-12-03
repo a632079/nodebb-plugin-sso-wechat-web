@@ -19,7 +19,11 @@ const constants = Object.freeze({
 })
 const authenticationController = module.parent.require('./controllers/authentication')
 const Wechat = {}
-
+Wechat.appendUserHashWhitelist = function (data, callback) {
+  data.whitelist.push('wxid')
+  data.whitelist.push('wxpic')
+  return setImmediate(callback, null, data)
+}
 Wechat.getStrategy = function (strategies, callback) {
   try {
     meta.settings.get('sso-wechat', function (err, settings) {
@@ -282,12 +286,12 @@ Wechat.init = function (data, callback) {
   data.router.get('/admin/plugins/sso-wechat', data.middleware.admin.buildHeader, renderAdmin)
   data.router.get('/api/admin/plugins/sso-wechat', renderAdmin)
 
-  hostHelpers.setupPageRoute(data.router, '/deauth/qq', data.middleware, [data.middleware.requireUser], function (req, res) {
+  hostHelpers.setupPageRoute(data.router, '/deauth/wechat', data.middleware, [data.middleware.requireUser], function (req, res) {
     res.render('partials/sso-wechat/deauth', {
       service: '微信'
     })
   })
-  data.router.post('/deauth/qq', data.middleware.requireUser, function (req, res, next) {
+  data.router.post('/deauth/wechat', data.middleware.requireUser, function (req, res, next) {
     Wechat.deleteUserData({
       uid: req.user.uid
     }, function (err, uid) {
