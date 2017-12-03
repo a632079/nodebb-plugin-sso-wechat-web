@@ -115,7 +115,7 @@ Wechat.getAssociation = function (data, callback) {
         name: constants.name,
         icon: constants.admin.icon
       })
-}
+    }
 
     callback(null, data)
   })
