@@ -340,7 +340,7 @@ Wechat.init = function (data, callback) {
 }
 Wechat.prepareInterstitial = function (data, callback) {
   // Only execute if:
-  //   - uid and fbid are set in session
+  //   - uid and wxid are set in session
   //   - email ends with "@wx.qq.com"
   if (data.userData.hasOwnProperty('uid') && data.userData.hasOwnProperty('wxid')) {
     user.getUserField(data.userData.uid, 'email', function (err, email) {
