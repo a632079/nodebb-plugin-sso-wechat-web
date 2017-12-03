@@ -111,7 +111,7 @@ Wechat.getAssociation = function (data, callback) {
     } else {
       data.associations.push({
         associated: false,
-        url: nconf.get('url') + '/deauth/wechat',
+        url: nconf.get('url') + '/auth/wechat',
         name: constants.name,
         icon: constants.admin.icon
       })
